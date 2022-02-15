@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/go-chi/chi/v5 v5.0.7
+	github.com/go-redis/redis/v8 v8.11.4
 	github.com/google/wire v0.5.0
 	github.com/tikivn/ultrago v1.0.7
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
@@ -12,6 +13,8 @@ require (
 )
 
 require (
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.2 // indirect

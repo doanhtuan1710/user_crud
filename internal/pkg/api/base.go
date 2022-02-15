@@ -25,7 +25,7 @@ func (h *BaseHandler) badRequest(w http.ResponseWriter, r *http.Request, err err
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusBadRequest)
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"error":   err,
+		"error":   err.Error(),
 		"data":    nil,
 		"success": false,
 	})

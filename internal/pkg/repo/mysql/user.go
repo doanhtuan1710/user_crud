@@ -2,19 +2,28 @@ package mysql
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"time"
 	"user_crud/internal/entity"
+	"user_crud/internal/pkg/infra"
 	"user_crud/internal/pkg/repo"
+	"user_crud/internal/pkg/repo/redis"
+	"user_crud/internal/pkg/setting"
 
 	"gorm.io/gorm"
 )
 
 type userRepo struct {
-	db *gorm.DB
+	db  *gorm.DB
+	rdb repo.UserRedisRepo
 }
 
-func NewUserRepo(db *gorm.DB) repo.UserRepo {
-	return &userRepo{db: db}
+func NewUserRepo(db *gorm.DB, rd *infra.RedisClient) repo.UserRepo {
+	return &userRepo{
+		db:  db,
+		rdb: redis.NewRedisRepo(rd, 1*time.Minute),
+	}
 }
 
 func (r *userRepo) Create(ctx context.Context, in *entity.User) (err error) {
@@ -26,7 +35,29 @@ func (r *userRepo) Create(ctx context.Context, in *entity.User) (err error) {
 func (r *userRepo) Retrieve(ctx context.Context, id string) (out *entity.User, err error) {
 
 	out = new(entity.User)
+	cache := new(userCache)
+
+	// Check if data in redis
+	res, err := r.rdb.Get(ctx, fmt.Sprintf(setting.REDIS_RETRIEVE_KEY, id))
+	if err == nil {
+		if errMarshall := json.Unmarshal([]byte(res), cache); errMarshall == nil {
+			out = cache.User
+			err = cache.GetError()
+			return
+		}
+	}
+
 	err = r.db.WithContext(ctx).First(out, id).Error
+
+	// If not cache, then set cache
+	defer func() {
+		if err != nil {
+			cache.Err = err.Error()
+		}
+		cache.User = out
+		r.rdb.Set(ctx, fmt.Sprintf(setting.REDIS_RETRIEVE_KEY, id), cache)
+	}()
+
 	return
 }
 
@@ -66,6 +97,20 @@ func (r *userRepo) List(ctx context.Context, query *entity.Query) (out []*entity
 	}
 
 	err = qs.Find(&out).Error
+
+	return
+}
+
+type userCache struct {
+	Err  string       `json:"err"`
+	User *entity.User `json:"user"`
+}
+
+func (u *userCache) GetError() (err error) {
+
+	if u.Err != "" {
+		err = fmt.Errorf(u.Err)
+	}
 
 	return
 }

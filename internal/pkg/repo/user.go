@@ -12,3 +12,8 @@ type UserRepo interface {
 	Delete(ctx context.Context, id string) (err error)
 	List(ctx context.Context, query *entity.Query) (out []*entity.User, err error)
 }
+
+type UserRedisRepo interface {
+	Set(ctx context.Context, key string, value interface{}) (err error)
+	Get(ctx context.Context, key string) (res string, err error)
+}
